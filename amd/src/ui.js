@@ -290,7 +290,7 @@ const getStr = async() => {
 const getMainQuestionTypes = function() {
   return [
     {
-      type: 'Multiple choice',
+      type: 'MULTICHOICE',
       subtypes: [
         {
           'type': 'MULTICHOICE',
@@ -381,7 +381,7 @@ const getMainQuestionTypes = function() {
       ]
     },
     {
-      type: 'KURZ',
+      type: 'SHORTANSWER',
       subtypes: [
         {
           'type': 'SHORTANSWER',
