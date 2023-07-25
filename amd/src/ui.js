@@ -232,12 +232,14 @@ const getStr = async() => {
     getString('layoutmultiple_horizontal', 'qtype_multianswer'),
     getString('layoutmultiple_vertical', 'qtype_multianswer'),
     getString('pluginnamesummary', 'qtype_multichoice'),
-    getString('pluginnamesummary', 'qtype_shortanswer'),
+    getString('short_summary_nocase', 'tiny_cloze'),
+    getString('short_summary_yescase', 'tiny_cloze'),
     getString('pluginnamesummary', 'qtype_numerical'),
     getString('multichoice', component),
     getString('multiresponse', component),
     getString('numerical', 'mod_quiz'),
-    getString('shortanswer', 'mod_quiz'),
+    getString('shortanswerno', 'tiny_cloze'),
+    getString('shortansweryes', 'tiny_cloze'),
     getString('cancel', 'core'),
     getString('select', component),
     getString('insert', component),
@@ -267,12 +269,14 @@ const getStr = async() => {
     'multi_horizontal',
     'multi_vertical',
     'summary_multichoice',
-    'summary_shortanswer',
+    'summary_shortanswer_nocase',
+    'summary_shortanswer_yescase',
     'summary_numerical',
     'multichoice',
     'multiresponse',
     'numerical',
-    'shortanswer',
+    'shortanswerno',
+    'shortansweryes',
     'btn_cancel',
     'btn_select',
     'btn_insert',
@@ -286,7 +290,7 @@ const getStr = async() => {
 const getMainQuestionTypes = function() {
   return [
     {
-      type: 'Multiple choice',
+      type: 'MULTICHOICE',
       subtypes: [
         {
           'type': 'MULTICHOICE',
@@ -377,21 +381,21 @@ const getMainQuestionTypes = function() {
       ]
     },
     {
-      type: 'KURZ',
+      type: 'SHORTANSWER',
       subtypes: [
         {
           'type': 'SHORTANSWER',
           'abbr': ['SA', 'MW'],
           'name': STR.shortanswer,
-          'summary': STR.summary_shortanswer,
-          'options': [STR.caseno],
+          'summary': STR.summary_shortanswer_nocase,
+          'options': [STR.shortanswerno],
         },
         {
           'type': 'SHORTANSWER_C',
           'abbr': ['SAC', 'MWC'],
           'name': STR.shortanswer,
-          'summary': STR.summary_shortanswer,
-          'options': [STR.caseyes],
+          'summary': STR.summary_shortanswer_yescase,
+          'options': [STR.shortansweryes],
         },
       ],
     },
@@ -774,7 +778,7 @@ const _setDialogueContent = function(qtype, nomodalevents) {
       answerdata: _answerdata,
       elementid: getUuid(),
       qtype: _qtype,
-      name: getQuestionTypes().filter(q => _qtype === q.type)[0].name,
+      name: getQuestionTypes().filter(q => _qtype === q.type)?.[0].name,
       marks: _marks,
       numerical: (_qtype === 'NUMERICAL' || _qtype === 'NM')
     });
