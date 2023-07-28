@@ -21,17 +21,19 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import ModalEvents from 'core/modal_events';
-import ModalFactory from 'core/modal_factory';
+import ModalEvents from "core/modal_events";
+import ModalFactory from "core/modal_factory";
 import Modal from "core/modal";
-import Mustache from 'core/mustache';
-import {get_string as getString} from 'core/str';
-import {component} from './common';
+import Mustache from "core/mustache";
+import { exception as displayException } from "core/notification";
+import Templates from "core/templates";
+import { get_string as getString } from "core/str";
+import { component } from "./common";
 
 // Helper functions.
-const isNull = a => a === null || a === undefined;
-const strdecode = t => String(t).replace(/\\(#|\}|~)/g, '$1');
-const strencode = t => String(t).replace(/(#|\}|~)/g, '\\$1');
+const isNull = (a) => a === null || a === undefined;
+const strdecode = (t) => String(t).replace(/\\(#|\}|~)/g, "$1");
+const strencode = (t) => String(t).replace(/(#|\}|~)/g, "\\$1");
 const indexOfNode = (list, node) => {
   for (let i = 0; i < list.length; i++) {
     if (list[i] === node) {
@@ -40,438 +42,492 @@ const indexOfNode = (list, node) => {
   }
   return -1;
 };
-const getUuid = function() {
+const getUuid = function () {
   if (!isNull(crypto.randomUUID)) {
     return crypto.randomUUID();
   }
-  return 'ed-cloze-' + Math.floor(Math.random() * 100000).toString();
+  return "ed-cloze-" + Math.floor(Math.random() * 100000).toString();
 };
 
 // This is a specific helper function to return the options html for the fraction select element.
-const getFractionOptions = s => {
+const getFractionOptions = (s) => {
   let html = '<option value="">' + STR.incorrect + '</option><option value="="';
-  if (s === '=') {
+  if (s === "=") {
     html += ' selected="selected"';
   }
-  html += '>' + STR.correct + '</option>';
-  FRACTIONS.forEach(item => {
+  html += ">" + STR.correct + "</option>";
+  FRACTIONS.forEach((item) => {
     html += '<option value="' + item.value + '"';
     if (item.value.toString() === s) {
       html += ' selected="selected"';
     }
-    html += '>' + item.value + '%</option>';
+    html += ">" + item.value + "%</option>";
   });
   return html;
 };
 // Marker class and the whole span element that is used to encapsulate the cloze question text.
-const markerClass = 'cloze-question-marker';
-const markerSpan = '<span contenteditable="false" class="' + markerClass + '" data-mce-contenteditable="false">';
-const markerNewPos = '{cloze_question_new_marker}';
+const markerClass = "cloze-question-marker";
+const markerSpan =
+  '<span contenteditable="false" class="' +
+  markerClass +
+  '" data-mce-contenteditable="false">';
+const markerNewPos = "{cloze_question_new_marker}";
 // Regex to recognize the question string in the text e.g. {1:NUMERICAL:...} or {:MULTICHOICE:...}
 // eslint-disable-next-line max-len
-const reQtype = /\{([0-9]*):(MULTICHOICE(_H|_V|_S|_HS|_VS)?|MULTIRESPONSE(_H|_S|_HS)?|NUMERICAL|SHORTANSWER(_C)?|SAC?|NM|MWC?|M[CR](V|H|VS|HS)?):(.*?)\}/g;
+const reQtype =
+  /\{([0-9]*):(MULTICHOICE(_H|_V|_S|_HS|_VS)?|MULTIRESPONSE(_H|_S|_HS)?|NUMERICAL|SHORTANSWER(_C)?|SAC?|NM|MWC?|M[CR](V|H|VS|HS)?):(.*?)\}/g;
 
 // CSS classes that are used in the modal dialogue.
 const CSS = {
-  ANSWER: 'tiny_cloze_answer',
-  ANSWERS: 'tiny_cloze_answers',
-  ADD: 'tiny_cloze_add',
-  CANCEL: 'tiny_cloze_cancel',
-  DELETE: 'tiny_cloze_delete',
-  FEEDBACK: 'tiny_cloze_feedback',
-  FRACTION: 'tiny_cloze_fraction',
-  LEFT: 'tiny_cloze_col0',
-  LOWER: 'tiny_cloze_down',
-  RIGHT: 'tiny_cloze_col1',
-  MARKS: 'tiny_cloze_marks',
-  DUPLICATE: 'tiny_cloze_duplicate',
-  RAISE: 'tiny_cloze_up',
-  SUBMIT: 'tiny_cloze_submit',
-  SUMMARY: 'tiny_cloze_summary',
-  TOLERANCE: 'tiny_cloze_tolerance',
-  TYPE: 'tiny_cloze_qtype'
+  ANSWER: "tiny_cloze_answer",
+  ANSWERS: "tiny_cloze_answers",
+  ADD: "tiny_cloze_add",
+  CANCEL: "tiny_cloze_cancel",
+  DELETE: "tiny_cloze_delete",
+  FEEDBACK: "tiny_cloze_feedback",
+  FRACTION: "tiny_cloze_fraction",
+  LEFT: "tiny_cloze_col0",
+  LOWER: "tiny_cloze_down",
+  RIGHT: "tiny_cloze_col1",
+  MARKS: "tiny_cloze_marks",
+  DUPLICATE: "tiny_cloze_duplicate",
+  RAISE: "tiny_cloze_up",
+  SUBMIT: "tiny_cloze_submit",
+  SUMMARY: "tiny_cloze_summary",
+  TOLERANCE: "tiny_cloze_tolerance",
+  TYPE: "tiny_cloze_qtype",
 };
 const TEMPLATE = {
-    FORM: '<div class="tiny_cloze">' +
-      '<p>{{name}} ({{qtype}})</p>' +
-      '<form name="tiny_cloze_form">' +
-      '<div class="row ml-0">' +
-      '<div class="form-group">' +
-      '<label for="{{elementid}}_mark">{{STR.defaultmark}}</label>' +
-      '<input id="{{elementid}}_mark" type="text" value="{{marks}}" ' +
-      'class="{{CSS.MARKS}} form-control d-inline mx-1" />' +
-      '<a class="{{CSS.ADD}}" title="{{STR.addmoreanswerblanks}}">' +
-      '<img class="icon_smallicon" src="' +
-      M.util.image_url('t/add', 'core') + '"></a>' +
-      '</div>' +
-      '</div>' +
-      '<div class="{{CSS.ANSWERS}} mb-3">' +
-      '<ol class="pl-3">{{#answerdata}}' +
-      '<li class="mt-3"><div class="row ml-0">' +
-      '<div class="{{CSS.LEFT}} form-group">' +
-      '<label for="{{id}}_answer">{{STR.answer}}</label>' +
-      '<input id="{{id}}_answer" type="text" value="{{answer}}" ' +
-      'class="{{CSS.ANSWER}} form-control d-inline mx-2" />' +
-      '</div>' +
-      '<div class="{{CSS.LEFT}} form-group">' +
-      '<a class="{{CSS.ADD}}" title="{{STR.addmoreanswerblanks}}">' +
-      '<img class="icon_smallicon" src="' +
-      M.util.image_url('t/add', 'core') + '"></a>' +
-      '<a class="{{CSS.DELETE}}" title="{{STR.delete}}">' +
-      '<img class="icon_smallicon" src="' +
-      M.util.image_url('t/delete', 'core') + '"></a>' +
-      '<a class="{{CSS.RAISE}}" title="{{STR.up}}">' +
-      '<img class="icon_smallicon" src="' +
-      M.util.image_url('t/up', 'core') + '"></a>' +
-      '<a class="{{CSS.LOWER}}" title="{{STR.down}}">' +
-      '<img class="icon_smallicon" src="' +
-      M.util.image_url('t/down', 'core') + '"></a>' +
-      '</div>' +
-      '</div>' +
-      '{{#numerical}}' +
-      '<div class="row">' +
-      '<div class="{{CSS.RIGHT}} form-group">' +
-      '<label for="{{id}}_tolerance">{{{STR.tolerance}}}</label>' +
-      '<input id="{{id}}_tolerance" type="text" value="{{tolerance}}" ' +
-      'class="{{CSS.TOLERANCE}} form-control d-inline mx-2" />' +
-      '</div>' +
-      '</div>' +
-      '{{/numerical}}' +
-      '<div class="row">' +
-      '<div class="{{CSS.RIGHT}} form-group">' +
-      '<label for="{{id}}_feedback">{{STR.feedback}}</label>' +
-      '<input id="{{id}}_feedback" type="text" value="{{feedback}}" ' +
-      'class="{{CSS.FEEDBACK}} form-control d-inline mx-2" />' +
-      '</div>' +
-      '<div class="{{CSS.RIGHT}} form-group">' +
-      '<label id="{{id}}_grade">{{STR.grade}}</label>' +
-      '<select id="{{id}}_grade" class="{{CSS.FRACTION}} custom-select mx-2">' +
-      '{{{fractionOptions}}}' +
-      '</select>' +
-      '</div>' +
-      '</div></li>' +
-      '{{/answerdata}}</ol></div>' +
-      '</form>' +
-      '</div>',
-    TYPE: '<div class="tiny_cloze mt-0 mx-2 mb-2">' +
-      '<p>{{STR.chooseqtypetoadd}}</p>' +
-      '<form name="tiny_cloze_form">' +
-      '<div class="{{CSS.TYPE}} form-check">' +
-      '{{#types}}' +
-      '<div class="option">' +
-      '<input name="qtype" id="qtype_qtype_{{type}}" value="{{type}}" type="radio" class="form-check-input">' +
-       '<label for="qtype_qtype_{{type}}">' +
-      '<span class="typename">{{type}}</span>' +
-      '<span class="form-shortname d-block small text-muted">theme_boost_union | loginformposition</span>' +
-      // '<input name="subqtype" id="qtype_qtype_{{subtypes.name}}" value="{{subtypes}}"' +
-      // 'type="radio" class="form-check-input {{CSS.SUMMARY}}">' +
-      // '<label for="qtype_qtype_{{subtypes}}">' +
-      // '</label>' +
-      '<span class="{{CSS.SUMMARY}}">' +
-      '<div class="tiny_cloze_postborder"><h6>{{name}}</h6><p>{{summary}}</p></div>' +
-      '<div class="tiny_cloze_postborder">' +
-      '{{#shuffleoption}}' +
-      '<h6>Settings:</h6>' +
-      '<div class="form-check row">' +
-      '<span class="col-12">' +
-      '<input type="checkbox" id="shuffleoptioninput" class="form-check-input">' +
-      '<label for="shuffleoptioninput">Shuffle</label>' +
-      '</span>' +
-      '</div >' +
-      '{{/shuffleoption}}' +
+  FORM:
+    '<div class="tiny_cloze">' +
+    "<p>{{name}} ({{qtype}})</p>" +
+    '<form name="tiny_cloze_form">' +
+    '<div class="row ml-0">' +
+    '<div class="form-group">' +
+    '<label for="{{elementid}}_mark">{{STR.defaultmark}}</label>' +
+    '<input id="{{elementid}}_mark" type="text" value="{{marks}}" ' +
+    'class="{{CSS.MARKS}} form-control d-inline mx-1" />' +
+    '<a class="{{CSS.ADD}}" title="{{STR.addmoreanswerblanks}}">' +
+    '<img class="icon_smallicon" src="' +
+    M.util.image_url("t/add", "core") +
+    '"></a>' +
+    "</div>" +
+    "</div>" +
+    '<div class="{{CSS.ANSWERS}} mb-3">' +
+    '<ol class="pl-3">{{#answerdata}}' +
+    '<li class="mt-3"><div class="row ml-0">' +
+    '<div class="{{CSS.LEFT}} form-group">' +
+    '<label for="{{id}}_answer">{{STR.answer}}</label>' +
+    '<input id="{{id}}_answer" type="text" value="{{answer}}" ' +
+    'class="{{CSS.ANSWER}} form-control d-inline mx-2" />' +
+    "</div>" +
+    '<div class="{{CSS.LEFT}} form-group">' +
+    '<a class="{{CSS.ADD}}" title="{{STR.addmoreanswerblanks}}">' +
+    '<img class="icon_smallicon" src="' +
+    M.util.image_url("t/add", "core") +
+    '"></a>' +
+    '<a class="{{CSS.DELETE}}" title="{{STR.delete}}">' +
+    '<img class="icon_smallicon" src="' +
+    M.util.image_url("t/delete", "core") +
+    '"></a>' +
+    '<a class="{{CSS.RAISE}}" title="{{STR.up}}">' +
+    '<img class="icon_smallicon" src="' +
+    M.util.image_url("t/up", "core") +
+    '"></a>' +
+    '<a class="{{CSS.LOWER}}" title="{{STR.down}}">' +
+    '<img class="icon_smallicon" src="' +
+    M.util.image_url("t/down", "core") +
+    '"></a>' +
+    "</div>" +
+    "</div>" +
+    "{{#numerical}}" +
+    '<div class="row">' +
+    '<div class="{{CSS.RIGHT}} form-group">' +
+    '<label for="{{id}}_tolerance">{{{STR.tolerance}}}</label>' +
+    '<input id="{{id}}_tolerance" type="text" value="{{tolerance}}" ' +
+    'class="{{CSS.TOLERANCE}} form-control d-inline mx-2" />' +
+    "</div>" +
+    "</div>" +
+    "{{/numerical}}" +
+    '<div class="row">' +
+    '<div class="{{CSS.RIGHT}} form-group">' +
+    '<label for="{{id}}_feedback">{{STR.feedback}}</label>' +
+    '<input id="{{id}}_feedback" type="text" value="{{feedback}}" ' +
+    'class="{{CSS.FEEDBACK}} form-control d-inline mx-2" />' +
+    "</div>" +
+    '<div class="{{CSS.RIGHT}} form-group">' +
+    '<label id="{{id}}_grade">{{STR.grade}}</label>' +
+    '<select id="{{id}}_grade" class="{{CSS.FRACTION}} custom-select mx-2">' +
+    "{{{fractionOptions}}}" +
+    "</select>" +
+    "</div>" +
+    "</div></li>" +
+    "{{/answerdata}}</ol></div>" +
+    "</form>" +
+    "</div>",
+  TYPE: `
+  <div class="tiny_cloze mt-0 mx-2 mb-2">
+  <p>{{ STR.chooseqtypetoadd }}</p>
+  <form name="tiny_cloze_form">
+    <div class="{{ CSS.TYPE }} form-check">
+      {{#types}}
+      <div class="option">
+          <input
+            name="qtype"
+            id="qtype_qtype_{{ type }}"
+            value="{{ type }}"
+            type="radio"
+            class="form-check-input"
+          />
+          <label for="qtype_qtype_{{ type }}"></label>
+          <span class="typename">{{ type }}</span>
+          <span class="form-shortname d-block small text-muted"
+            >theme_boost_union | loginformposition</span
+          >
+        <span class="{{ CSS.SUMMARY }}">
+          <div class="tiny_cloze_postborder">
+            <h6>{{ name }}</h6>
+            <p>{{ summary }}</p>
+          </div>
+          <div class="tiny_cloze_postborder">
+            {{#shuffleoption}}
+            <h6>Settings:</h6>
+            <div class="form-check row">
+              <span class="col-12">
+                <input
+                  type="checkbox"
+                  id="shuffleoptioninput"
+                  class="form-check-input"
+                />
+                <label for="shuffleoptioninput">Shuffle</label>
+              </span>
+            </div>
+            {{/shuffleoption}}
 
-      '{{#casesensitiveoption}}' +
-      '<div class="form-check row">' +
-      '<span class="col-12">' +
-      '<input type="checkbox" id="casesensitiveoptioninput" class="form-check-input">' +
-      '<label for="casesensitiveoptioninput">casesensitive</label>' +
-      '</span>' +
-      '</div >' +
-      '{{/casesensitiveoption}}' +
+            {{#casesensitiveoption}}
+            <h6>Settings:</h6>
+            <div class="form-check row">
+              <span class="col-12">
+                <input
+                  type="checkbox"
+                  id="casesensitiveoptioninput"
+                  class="form-check-input"
+                />
+                <label for="casesensitiveoptioninput">casesensitive</label>
+              </span>
+            </div>
+            {{/casesensitiveoption}}
 
-      '{{#dropboxoption}}' +
-      '<div class="form-check row">' +
-      '<span class="col-6">' +
-      '<input name="dropboxoptioninput" type="radio" id="dropboxoptioninput" class="form-check-input">' +
-      '<label for="dropboxoptioninput">Dropbox</label>' +
-      '</span>' +
-      '<span class="col-6">' +
-      '<input name="dropboxoptioninput" type="radio" id="dropboxoptioninput" class="form-check-input">' +
-      '<label for="dropboxoptioninput">Radiobutton</label>' +
-      '</span>' +
-      '</div >' +
-      '{{/dropboxoption}}' +
+            {{#dropboxoption}}
+            <div class="form-check row">
+              <span class="col-6">
+                <input
+                  name="dropboxoptioninput"
+                  type="radio"
+                  id="dropboxoptioninput"
+                  class="form-check-input"
+                />
+                <label for="dropboxoptioninput">Dropbox</label>
+              </span>
+              <span class="col-6">
+                <input
+                  name="dropboxoptioninput"
+                  type="radio"
+                  id="dropboxoptioninput"
+                  class="form-check-input"
+                />
+                <label for="dropboxoptioninput">Radiobutton</label>
+              </span>
+            </div>
+            {{/dropboxoption}}
 
-      '{{#alignmentoption}}' +
-      '<div class="form-check row">' +
-      '<span class="col-6">' +
-      '<input name="alignmentoptioninput" type="radio" id="alignmentoptioninput" class="form-check-input">' +
-      '<label for="alignmentoptioninput">Vertical</label>' +
-      '</span>' +
-      '<span class="col-6">' +
-      '<input name="alignmentoptioninput" type="radio" id="alignmentoptioninput" class="form-check-input">' +
-      '<label for="alignmentoptioninput">Horizontal</label>' +
-      '</span >' +
-      '</div>' +
-      '{{/alignmentoption}}' +
-      '</div>' +
+            {{#alignmentoption}}
+            <div class="form-check row">
+              <span class="col-6">
+                <input
+                  name="alignmentoptioninput"
+                  type="radio"
+                  id="alignmentoptioninput"
+                  class="form-check-input"
+                />
+                <label for="alignmentoptioninput">Vertical</label>
+              </span>
+              <span class="col-6">
+                <input
+                  name="alignmentoptioninput"
+                  type="radio"
+                  id="alignmentoptioninput"
+                  class="form-check-input"
+                />
+                <label for="alignmentoptioninput">Horizontal</label>
+              </span>
+            </div>
+            {{/alignmentoption}}
 
-      '<div class="tiny_cloze_premargin">' +
-      '<h6>Functionality:</h6>' +
-      '<ul>' +
-      '{{#options}}' +
-      '<li>{{.}}</li>' +
-      '{{/options}}' +
-//       '{{#shuffleoption}}' +
-//       '<li>{{STR.shuffle}}</li>' +
-//       '{{/shuffleoption}}' +
-//       '{{#dropboxoption}}' +
-//       '<li>{{STR.shuffle}}</li>' +
-//       '{{/dropboxoption}}' +
-// ...
-      '</ul>' +
-      '</div>' +
-      '</span>' +
-      '</div>' +
-      '{{/types}}' +
-      '</div>' +
-      '</form></div>',
-    FOOTER: '<button type="button" class="btn btn-secondary" data-action="cancel">{{cancel}}</button>' +
-      '<button type="button" class="btn btn-primary" data-action="save">{{submit}}</button>',
-  };
-  const FRACTIONS = [
-    {value: 100},
-    {value: 50},
-    {value: 33.33333},
-    {value: 25},
-    {value: 20},
-    {value: 16.66667},
-    {value: 14.28571},
-    {value: 12.5},
-    {value: 11.11111},
-    {value: 10},
-    {value: 5},
-    {value: 0},
-    {value: -5},
-    {value: -10},
-    {value: -11.11111},
-    {value: -12.5},
-    {value: -14.28571},
-    {value: -16.66667},
-    {value: -20},
-    {value: -25},
-    {value: -33.333},
-    {value: -50},
-    {value: -100},
-  ];
+            <div class="tiny_cloze_premargin">
+              <h6>Functionality:</h6>
+              <ul>
+                {{#options}}
+                <li>{{.}}</li>
+                {{/options}}
+              </ul>
+            </div>
+          </div>
+        </span>
+      </div>
+      {{/types}}
+    </div>
+  </form>
+</div>
+  `,
+  FOOTER:
+    '<button type="button" class="btn btn-secondary" data-action="cancel">{{cancel}}</button>' +
+    '<button type="button" class="btn btn-primary" data-action="save">{{submit}}</button>',
+};
+const FRACTIONS = [
+  { value: 100 },
+  { value: 50 },
+  { value: 33.33333 },
+  { value: 25 },
+  { value: 20 },
+  { value: 16.66667 },
+  { value: 14.28571 },
+  { value: 12.5 },
+  { value: 11.11111 },
+  { value: 10 },
+  { value: 5 },
+  { value: 0 },
+  { value: -5 },
+  { value: -10 },
+  { value: -11.11111 },
+  { value: -12.5 },
+  { value: -14.28571 },
+  { value: -16.66667 },
+  { value: -20 },
+  { value: -25 },
+  { value: -33.333 },
+  { value: -50 },
+  { value: -100 },
+];
 
 // Language strings used in the modal dialogue.
 let STR = {};
-const getStr = async() => {
+const getStr = async () => {
   const res = await Promise.all([
-    getString('answer', 'question'),
-    getString('chooseqtypetoadd', 'question'),
-    getString('defaultmark', 'question'),
-    getString('feedback', 'question'),
-    getString('correct', 'question'),
-    getString('incorrect', 'question'),
-    getString('addmoreanswerblanks', 'qtype_calculated'),
-    getString('delete', 'core'),
-    getString('up', 'core'),
-    getString('down', 'core'),
-    getString('tolerance', 'qtype_calculated'),
-    getString('grade', 'grades'),
-    getString('caseno', 'mod_quiz'),
-    getString('caseyes', 'mod_quiz'),
-    getString('answersingleno', 'qtype_multichoice'),
-    getString('answersingleyes', 'qtype_multichoice'),
-    getString('layoutselectinline', 'qtype_multianswer'),
-    getString('layouthorizontal', 'qtype_multianswer'),
-    getString('layoutvertical', 'qtype_multianswer'),
-    getString('shufflewithin', 'mod_quiz'),
-    getString('layoutmultiple_horizontal', 'qtype_multianswer'),
-    getString('layoutmultiple_vertical', 'qtype_multianswer'),
-    getString('pluginnamesummary', 'qtype_multichoice'),
-    getString('short_summary_nocase', 'tiny_cloze'),
-    getString('short_summary_yescase', 'tiny_cloze'),
-    getString('pluginnamesummary', 'qtype_numerical'),
-    getString('multichoice', component),
-    getString('multiresponse', component),
-    getString('numerical', 'mod_quiz'),
-    getString('shortanswerno', 'tiny_cloze'),
-    getString('shortansweryes', 'tiny_cloze'),
-    getString('cancel', 'core'),
-    getString('select', component),
-    getString('insert', component),
-    getString('pluginname', component),
+    getString("answer", "question"),
+    getString("chooseqtypetoadd", "question"),
+    getString("defaultmark", "question"),
+    getString("feedback", "question"),
+    getString("correct", "question"),
+    getString("incorrect", "question"),
+    getString("addmoreanswerblanks", "qtype_calculated"),
+    getString("delete", "core"),
+    getString("up", "core"),
+    getString("down", "core"),
+    getString("tolerance", "qtype_calculated"),
+    getString("grade", "grades"),
+    getString("caseno", "mod_quiz"),
+    getString("caseyes", "mod_quiz"),
+    getString("answersingleno", "qtype_multichoice"),
+    getString("answersingleyes", "qtype_multichoice"),
+    getString("layoutselectinline", "qtype_multianswer"),
+    getString("layouthorizontal", "qtype_multianswer"),
+    getString("layoutvertical", "qtype_multianswer"),
+    getString("shufflewithin", "mod_quiz"),
+    getString("layoutmultiple_horizontal", "qtype_multianswer"),
+    getString("layoutmultiple_vertical", "qtype_multianswer"),
+    getString("pluginnamesummary", "qtype_multichoice"),
+    getString("short_summary_nocase", "tiny_cloze"),
+    getString("short_summary_yescase", "tiny_cloze"),
+    getString("pluginnamesummary", "qtype_numerical"),
+    getString("multichoice", component),
+    getString("multiresponse", component),
+    getString("numerical", "mod_quiz"),
+    getString("shortanswerno", "tiny_cloze"),
+    getString("shortansweryes", "tiny_cloze"),
+    getString("cancel", "core"),
+    getString("select", component),
+    getString("insert", component),
+    getString("pluginname", component),
   ]);
   [
-    'answer',
-    'chooseqtypetoadd',
-    'defaultmark',
-    'feedback',
-    'correct',
-    'incorrect',
-    'addmoreanswerblanks',
-    'delete',
-    'up',
-    'down',
-    'tolerance',
-    'grade',
-    'caseno',
-    'caseyes',
-    'singleno',
-    'singleyes',
-    'selectinline',
-    'horizontal',
-    'vertical',
-    'shuffle',
-    'multi_horizontal',
-    'multi_vertical',
-    'summary_multichoice',
-    'summary_shortanswer_nocase',
-    'summary_shortanswer_yescase',
-    'summary_numerical',
-    'multichoice',
-    'multiresponse',
-    'numerical',
-    'shortanswerno',
-    'shortansweryes',
-    'btn_cancel',
-    'btn_select',
-    'btn_insert',
-    'title',
+    "answer",
+    "chooseqtypetoadd",
+    "defaultmark",
+    "feedback",
+    "correct",
+    "incorrect",
+    "addmoreanswerblanks",
+    "delete",
+    "up",
+    "down",
+    "tolerance",
+    "grade",
+    "caseno",
+    "caseyes",
+    "singleno",
+    "singleyes",
+    "selectinline",
+    "horizontal",
+    "vertical",
+    "shuffle",
+    "multi_horizontal",
+    "multi_vertical",
+    "summary_multichoice",
+    "summary_shortanswer_nocase",
+    "summary_shortanswer_yescase",
+    "summary_numerical",
+    "multichoice",
+    "multiresponse",
+    "numerical",
+    "shortanswerno",
+    "shortansweryes",
+    "btn_cancel",
+    "btn_select",
+    "btn_insert",
+    "title",
   ].map((l, i) => {
     STR[l] = res[i];
-    return ''; // Make the linter happy.
+    return ""; // Make the linter happy.
   });
 };
 
-const getMainQuestionTypes = function() {
+const getMainQuestionTypes = function () {
   return [
     {
-      type: 'MULTICHOICE',
+      type: "MULTICHOICE",
       name: STR.multichoice,
       summary: STR.summary_multichoice,
       shuffleoption: true,
       dropboxoption: true,
       alignmentoption: true,
-      options: [STR.horizontal, STR.vertical, STR.selectinline, STR.shuffle, STR.singleyes],
+      options: [
+        STR.horizontal,
+        STR.vertical,
+        STR.selectinline,
+        STR.shuffle,
+        STR.singleyes,
+      ],
     },
     {
-      type: 'MULTIRESPONSE',
+      type: "MULTIRESPONSE",
       name: STR.multiresponse,
       summary: STR.summary_multichoice,
       shuffleoption: true,
       alignmentoption: true,
-      options: [STR.shuffle, STR.multi_horizontal, STR.multi_vertical, STR.singleno],
+      options: [
+        STR.shuffle,
+        STR.multi_horizontal,
+        STR.multi_vertical,
+        STR.singleno,
+      ],
     },
     {
-      type: 'NUMERICAL',
+      type: "NUMERICAL",
       name: STR.numerical,
       summary: STR.summary_numerical,
     },
     {
-      type: 'SHORTANSWER',
+      type: "SHORTANSWER",
       name: STR.shortanswer,
       summary: STR.summary_shortanswer,
       casesensitiveoption: true,
-      options: [STR.caseno,STR.caseyes],
+      options: [STR.caseno, STR.caseyes],
     },
   ];
 };
 
-const getQuestionTypes = function() {
+const getQuestionTypes = function () {
   return [
     {
-      'type': 'MULTICHOICE',
-      'abbr': ['MC'],
-      'name': STR.multichoice,
-      'summary': STR.summary_multichoice,
-      'options': [STR.selectinline, STR.singleyes],
+      type: "MULTICHOICE",
+      abbr: ["MC"],
+      name: STR.multichoice,
+      summary: STR.summary_multichoice,
+      options: [STR.selectinline, STR.singleyes],
     },
     {
-      'type': 'MULTICHOICE_H',
-      'abbr': ['MCH'],
-      'name': STR.multichoice,
-      'summary': STR.summary_multichoice,
-      'options': [STR.horizontal, STR.singleyes],
+      type: "MULTICHOICE_H",
+      abbr: ["MCH"],
+      name: STR.multichoice,
+      summary: STR.summary_multichoice,
+      options: [STR.horizontal, STR.singleyes],
     },
     {
-      'type': 'MULTICHOICE_V',
-      'abbr': ['MCV'],
-      'name': STR.multichoice,
-      'summary': STR.summary_multichoice,
-      'options': [STR.vertical, STR.singleyes],
+      type: "MULTICHOICE_V",
+      abbr: ["MCV"],
+      name: STR.multichoice,
+      summary: STR.summary_multichoice,
+      options: [STR.vertical, STR.singleyes],
     },
     {
-      'type': 'MULTICHOICE_S',
-      'abbr': ['MCS'],
-      'name': STR.multichoice,
-      'summary': STR.summary_multichoice,
-      'options': [STR.selectinline, STR.shuffle, STR.singleyes],
+      type: "MULTICHOICE_S",
+      abbr: ["MCS"],
+      name: STR.multichoice,
+      summary: STR.summary_multichoice,
+      options: [STR.selectinline, STR.shuffle, STR.singleyes],
     },
     {
-      'type': 'MULTICHOICE_HS',
-      'abbr': ['MCHS'],
-      'name': STR.multichoice,
-      'summary': STR.summary_multichoice,
-      'options': [STR.horizontal, STR.shuffle, STR.singleyes],
+      type: "MULTICHOICE_HS",
+      abbr: ["MCHS"],
+      name: STR.multichoice,
+      summary: STR.summary_multichoice,
+      options: [STR.horizontal, STR.shuffle, STR.singleyes],
     },
     {
-      'type': 'MULTICHOICE_VS',
-      'abbr': ['MCVS'],
-      'name': STR.multichoice,
-      'summary': STR.summary_multichoice,
-      'options': [STR.vertical, STR.shuffle, STR.singleyes],
+      type: "MULTICHOICE_VS",
+      abbr: ["MCVS"],
+      name: STR.multichoice,
+      summary: STR.summary_multichoice,
+      options: [STR.vertical, STR.shuffle, STR.singleyes],
     },
     {
-      'type': 'MULTIRESPONSE',
-      'abbr': ['MR'],
-      'name': STR.multiresponse,
-      'summary': STR.summary_multichoice,
-      'options': [STR.multi_vertical, STR.singleno],
+      type: "MULTIRESPONSE",
+      abbr: ["MR"],
+      name: STR.multiresponse,
+      summary: STR.summary_multichoice,
+      options: [STR.multi_vertical, STR.singleno],
     },
     {
-      'type': 'MULTIRESPONSE_H',
-      'abbr': ['MRH'],
-      'name': STR.multiresponse,
-      'summary': STR.summary_multichoice,
-      'options': [STR.multi_horizontal, STR.singleno],
+      type: "MULTIRESPONSE_H",
+      abbr: ["MRH"],
+      name: STR.multiresponse,
+      summary: STR.summary_multichoice,
+      options: [STR.multi_horizontal, STR.singleno],
     },
     {
-      'type': 'MULTIRESPONSE_S',
-      'abbr': ['MRS'],
-      'name': STR.multiresponse,
-      'summary': STR.summary_multichoice,
-      'options': [STR.multi_vertical, STR.shuffle, STR.singleno],
+      type: "MULTIRESPONSE_S",
+      abbr: ["MRS"],
+      name: STR.multiresponse,
+      summary: STR.summary_multichoice,
+      options: [STR.multi_vertical, STR.shuffle, STR.singleno],
     },
     {
-      'type': 'MULTIRESPONSE_HS',
-      'abbr': ['MRHS'],
-      'name': STR.multiresponse,
-      'summary': STR.summary_multichoice,
-      'options': [STR.multi_horizontal, STR.shuffle, STR.singleno],
+      type: "MULTIRESPONSE_HS",
+      abbr: ["MRHS"],
+      name: STR.multiresponse,
+      summary: STR.summary_multichoice,
+      options: [STR.multi_horizontal, STR.shuffle, STR.singleno],
     },
     {
-      'type': 'NUMERICAL',
-      'abbr': ['NM'],
-      'name': STR.numerical,
-      'summary': STR.summary_numerical,
+      type: "NUMERICAL",
+      abbr: ["NM"],
+      name: STR.numerical,
+      summary: STR.summary_numerical,
     },
     {
-      'type': 'SHORTANSWER',
-      'abbr': ['SA', 'MW'],
-      'name': STR.shortanswer,
-      'summary': STR.summary_shortanswer,
-      'options': [STR.caseno],
+      type: "SHORTANSWER",
+      abbr: ["SA", "MW"],
+      name: STR.shortanswer,
+      summary: STR.summary_shortanswer,
+      options: [STR.caseno],
     },
     {
-      'type': 'SHORTANSWER_C',
-      'abbr': ['SAC', 'MWC'],
-      'name': STR.shortanswer,
-      'summary': STR.summary_shortanswer,
-      'options': [STR.caseyes],
+      type: "SHORTANSWER_C",
+      abbr: ["SAC", "MWC"],
+      name: STR.shortanswer,
+      summary: STR.summary_shortanswer,
+      options: [STR.caseyes],
     },
   ];
 };
@@ -544,10 +600,10 @@ let _modal = null;
  * Inject the editor instance and add markers to the cloze question texts.
  * @param {tinymce.Editor} ed
  */
-const onInit = function(ed) {
+const onInit = function (ed) {
   _editor = ed; // The current editor instance.
   // Hide the new question marker from the user.
-  ed.dom.addStyle('.' + markerClass + '.new { display:none;}');
+  ed.dom.addStyle("." + markerClass + ".new { display:none;}");
   // Add the marker spans.
   _addMarkers();
   // And get the language strings.
@@ -559,13 +615,13 @@ const onInit = function(ed) {
  * @return {Promise<void>}
  * @private
  */
-const _createModal = async function() {
+const _createModal = async function () {
   // Create the modal dialogue. Depending on whether we have a selected node or not, the content is different.
   _modal = await ModalFactory.create({
     type: Modal.TYPE,
     title: STR.title,
     templateContext: {
-      elementid: _editor.id
+      elementid: _editor.id,
     },
     removeOnClose: true,
     large: true,
@@ -579,21 +635,28 @@ const _createModal = async function() {
  * @method displayDialogue
  * @private
  */
-const displayDialogue = async function() {
+const displayDialogue = async function () {
   await _createModal();
 
   // Resolve whether cursor is in a subquestion.
   var subquestion = resolveSubquestion();
   if (subquestion) {
     // Subquestion found, remember which node of the marker nodes is selected.
-    _selectedOffset = indexOfNode(_editor.dom.select('.' + markerClass), subquestion);
+    _selectedOffset = indexOfNode(
+      _editor.dom.select("." + markerClass),
+      subquestion
+    );
     _parseSubquestion(subquestion.innerHTML);
     _setDialogueContent(_qtype);
   } else {
     // No subquestion found, no offset to remember, but we place a marker at the position where the question
     // will be inserted later.
     _selectedOffset = -1;
-    _editor.insertContent(markerSpan.replace(markerClass, markerClass + ' new') + markerNewPos + '</span>');
+    _editor.insertContent(
+      markerSpan.replace(markerClass, markerClass + " new") +
+        markerNewPos +
+        "</span>"
+    );
     _setDialogueContent();
   }
 };
@@ -606,10 +669,9 @@ const displayDialogue = async function() {
  * textarea). Also, this makes it a lot easier to select the question, edit it in the dialogue and replace the result
  * in the existing text area.
  */
-const _addMarkers = function() {
-
+const _addMarkers = function () {
   let content = _editor.getContent();
-  let newContent = '';
+  let newContent = "";
 
   // Check if there is already a marker span. In this case we do not have to do anything.
   if (content.indexOf(markerClass) !== -1) {
@@ -619,31 +681,37 @@ const _addMarkers = function() {
   let m;
   do {
     m = content.match(reQtype);
-    if (!m) { // No match of a cloze question, then we are done.
+    if (!m) {
+      // No match of a cloze question, then we are done.
       newContent += content;
       break;
     }
     // Copy the current match to the new string preceded with the <span>.
     const pos = content.indexOf(m[0]);
-    newContent += content.substring(0, pos) + markerSpan + content.substring(pos, pos + m[0].length);
+    newContent +=
+      content.substring(0, pos) +
+      markerSpan +
+      content.substring(pos, pos + m[0].length);
     content = content.substring(pos + m[0].length);
 
     // Count the { in the string, should be just one (the very first one at position 0).
     let level = (m[0].match(/\{/g) || []).length;
     if (level === 1) {
       // If that's the case, we close the span and the cloze question text is the innerHTML of that marker span.
-      newContent += '</span>';
+      newContent += "</span>";
       continue; // Look for the next matching cloze question.
     }
     // If there are more { than } in the string, then we did not find the corresponding } that belongs to the cloze string.
     while (level > 1) {
-      const a = content.indexOf('{');
-      const b = content.indexOf('}');
-      if (a > -1 && b > -1 && a < b) { // The { is before another } so remember to find as many } until we back at level 1.
+      const a = content.indexOf("{");
+      const b = content.indexOf("}");
+      if (a > -1 && b > -1 && a < b) {
+        // The { is before another } so remember to find as many } until we back at level 1.
         level++;
         newContent = content.substring(0, a);
         content = content.substring(a + 1);
-      } else if (b > -1) { // We found a closing } to a previously {.
+      } else if (b > -1) {
+        // We found a closing } to a previously {.
         newContent = content.substring(0, b);
         content = content.substring(b + 1);
         level--;
@@ -651,9 +719,14 @@ const _addMarkers = function() {
         level = 1; // Should not happen, just to stop the endless loop.
       }
     }
-    newContent += '</span>';
+    newContent += "</span>";
   } while (m);
-  newContent = newContent.replace(markerNewPos, markerSpan.replace(markerClass, markerClass + ' new') + markerNewPos + '</span>');
+  newContent = newContent.replace(
+    markerNewPos,
+    markerSpan.replace(markerClass, markerClass + " new") +
+      markerNewPos +
+      "</span>"
+  );
   _editor.setContent(newContent);
 };
 
@@ -661,9 +734,12 @@ const _addMarkers = function() {
  * Look for the marker span elements around a cloze question and remove that span. Also, the marker for a new
  * node to be inserted would be removed here as well.
  */
-const _removeMarkers = function() {
-  for (const span of _editor.dom.select('span.' + markerClass)) {
-    _editor.dom.setOuterHTML(span, span.classList.contains('new') ? '' : span.innerHTML);
+const _removeMarkers = function () {
+  for (const span of _editor.dom.select("span." + markerClass)) {
+    _editor.dom.setOuterHTML(
+      span,
+      span.classList.contains("new") ? "" : span.innerHTML
+    );
   }
 };
 
@@ -674,15 +750,15 @@ const _removeMarkers = function() {
  * highlighting content at that time.
  * @param {object} content
  */
-const onBeforeGetContent = function(content) {
+const onBeforeGetContent = function (content) {
   if (!isNull(content.source_view) && content.source_view === true) {
     // If the user clicks on 'Cancel' or the close button on the html
     // source code dialog view, make sure we re-add the visual styling.
-    var onClose = function() {
-      _editor.off('close', onClose);
+    var onClose = function () {
+      _editor.off("close", onClose);
       _addMarkers();
     };
-    _editor.on('CloseWindow', () => {
+    _editor.on("CloseWindow", () => {
       onClose();
     });
     // Remove markers only if modal is not called, otherwise we will lose our new question marker.
@@ -698,7 +774,7 @@ const onBeforeGetContent = function(content) {
  * question strings).
  * @param {object} content
  */
-const onPreProcess = function(content) {
+const onPreProcess = function (content) {
   if (!isNull(content.save) && content.save === true && !_modal) {
     // Remove markers only if modal is not called, otherwise we will lose our new question marker.
     _removeMarkers();
@@ -711,7 +787,7 @@ const onPreProcess = function(content) {
  * styling to prevent that this is saved in the database.
  * @param {object} content
  */
-const onPostProcess = function(content) {
+const onPostProcess = function (content) {
   if (!isNull(content.save) && content.save === true && _isBlurred) {
     _addMarkers();
     _isBlurred = false;
@@ -721,7 +797,7 @@ const onPostProcess = function(content) {
 /**
  * Notice when the editor content is blurred, because the focus left the editor window.
  */
-const onBlur = function() {
+const onBlur = function () {
   _isBlurred = true;
 };
 
@@ -737,19 +813,29 @@ const onBlur = function() {
  * @param {boolean} nomodalevents Optional do not attach events.
  * @private
  */
-const _setDialogueContent = function(qtype, nomodalevents) {
+const _setDialogueContent = async function (qtype, nomodalevents) {
   const footer = Mustache.render(TEMPLATE.FOOTER, {
     cancel: STR.btn_cancel,
     submit: !qtype ? STR.btn_select : STR.btn_insert,
   });
   let contentText;
   if (!qtype) {
-    contentText = Mustache.render(TEMPLATE.TYPE, {
+    let context = {
       CSS: CSS,
       STR: STR,
       qtype: _qtype,
-      types: getMainQuestionTypes()
-    });
+      types: getMainQuestionTypes(),
+    };
+    let qtypemustache = await Templates.renderForPromise(
+      "editor_tiny/qtype_cloze",
+      { ...context }
+    );
+    //    let qtypemustache = async(identifier, component = 'editor_tiny') => Templates.renderForPromise('editor_tiny/qtype_cloze', {
+    //     ...context,
+    // });
+    // eslint-disable-next-line no-console
+    console.log(qtypemustache);
+    contentText = qtypemustache.html;
   } else {
     contentText = Mustache.render(TEMPLATE.FORM, {
       CSS: CSS,
@@ -757,34 +843,35 @@ const _setDialogueContent = function(qtype, nomodalevents) {
       answerdata: _answerdata,
       elementid: getUuid(),
       qtype: _qtype,
-      name: getQuestionTypes().filter(q => _qtype === q.type)?.[0].name,
+      name: getQuestionTypes().filter((q) => _qtype === q.type)?.[0].name,
       marks: _marks,
-      numerical: (_qtype === 'NUMERICAL' || _qtype === 'NM')
+      numerical: _qtype === "NUMERICAL" || _qtype === "NM",
     });
   }
   _modal.setBody(contentText);
   _modal.setFooter(footer);
   _modal.show();
   const $root = _modal.getRoot();
-  _form = $root.get(0).querySelector('form');
+  _form = $root.get(0).querySelector("form");
 
   // eslint-disable-next-line no-console
 
-  if (!nomodalevents) {  
-    console.log(_form,_modal);  
+  if (!nomodalevents) {
+    console.log(_form, _modal);
     _modal.registerEventListeners();
     _modal.registerCloseOnSave();
     _modal.registerCloseOnCancel();
     $root.on(ModalEvents.cancel, _cancel);
 
-    if (!qtype) { // For the question list we need the choice handler only, and we are done.
+    if (!qtype) {
+      // For the question list we need the choice handler only, and we are done.
       $root.on(ModalEvents.save, _choiceHandler);
 
-      _form.addEventListener('click', e => {
+      _form.addEventListener("click", (e) => {
         // eslint-disable-next-line babel/no-unused-expressions, no-console
         console.log("somethingclicked", e);
-        
-       // _changeSelectedQuestionType
+
+        // _changeSelectedQuestionType
         // if (p.classList.contains(CSS.DELETE)) {
         //   e.preventDefault();
         //   _deleteAnswer(p);
@@ -796,9 +883,9 @@ const _setDialogueContent = function(qtype, nomodalevents) {
     $root.on(ModalEvents.save, _setSubquestion);
   }
   // The form needs events for the icons to move up/down, add or delete a response.
-  const getTarget = e => {
+  const getTarget = (e) => {
     let p = e.target;
-    while (!isNull(p) && p.nodeType === 1 && p.tagName !== 'A') {
+    while (!isNull(p) && p.nodeType === 1 && p.tagName !== "A") {
       p = p.parentNode;
     }
     if (isNull(p.classList)) {
@@ -807,7 +894,7 @@ const _setDialogueContent = function(qtype, nomodalevents) {
     return p;
   };
 
-  _form.addEventListener('click', e => {
+  _form.addEventListener("click", (e) => {
     const p = getTarget(e);
     if (isNull(p)) {
       return;
@@ -833,12 +920,15 @@ const _setDialogueContent = function(qtype, nomodalevents) {
     }
   });
 
-  _form.addEventListener('keyup', e => {
+  _form.addEventListener("keyup", (e) => {
     const p = getTarget(e);
     if (isNull(p)) {
       return;
     }
-    if (p.classList.contains(CSS.ANSWER) || p.classList.contains(CSS.FEEDBACK)) {
+    if (
+      p.classList.contains(CSS.ANSWER) ||
+      p.classList.contains(CSS.FEEDBACK)
+    ) {
       e.preventDefault();
       _addAnswer(p);
     }
@@ -852,29 +942,31 @@ const _setDialogueContent = function(qtype, nomodalevents) {
  * @private
  * @param {Event} e Event from button click in chooser
  */
-const _choiceHandler = function(e) {
+const _choiceHandler = function (e) {
   e.preventDefault();
-  let qtype = _form.querySelector('input[name=qtype]:checked');
+  let qtype = _form.querySelector("input[name=qtype]:checked");
   if (qtype) {
     _qtype = qtype.value;
   }
-  const one = _qtype.indexOf('SHORTANSWER') !== -1 || _qtype === 'NUMERICAL';
+  const one = _qtype.indexOf("SHORTANSWER") !== -1 || _qtype === "NUMERICAL";
   const blankAnswer = {
     id: getUuid(),
-    answer: '',
-    feedback: '',
+    answer: "",
+    feedback: "",
     fraction: 100,
-    fractionOptions: getFractionOptions(one ? '=' : ''),
-    tolerance: 0
+    fractionOptions: getFractionOptions(one ? "=" : ""),
+    tolerance: 0,
   };
   _answerdata = one ? [blankAnswer] : [blankAnswer, blankAnswer, blankAnswer];
   _modal.destroy();
   // Our choice is stored in _qtype. We need to create the modal dialogue with the form now.
-  _createModal().then(() => {
-    _setDialogueContent(_qtype);
-    _form.querySelector('.' + CSS.ANSWER).focus();
-    return ''; // Make the linter happy.
-  }).catch();
+  _createModal()
+    // eslint-disable-next-line promise/always-return
+    .then(async () => {
+      await _setDialogueContent(_qtype);
+      _form.querySelector("." + CSS.ANSWER).focus();
+    })
+    .catch((error) => displayException(error));
 };
 
 /**
@@ -884,7 +976,7 @@ const _choiceHandler = function(e) {
  * @private
  * @param {String} question The question string
  */
-const _parseSubquestion = function(question) {
+const _parseSubquestion = function (question) {
   _answerdata = []; // Flush answers to have an empty dialogue if something goes wrong parsing the question string.
   const parts = reQtype.exec(question);
   reQtype.lastIndex = 0; // Reset lastIndex so that the next match starts from the beginning of the question string.
@@ -895,7 +987,7 @@ const _parseSubquestion = function(question) {
   _qtype = parts[2];
   // Convert the short notation to the long form e.g. SA to SHORTANSWER.
   if (_qtype.length < 5) {
-    getQuestionTypes().forEach(l => {
+    getQuestionTypes().forEach((l) => {
       for (const a of l.abbr) {
         if (a === _qtype) {
           _qtype = l.type;
@@ -908,20 +1000,20 @@ const _parseSubquestion = function(question) {
   if (!answers) {
     return;
   }
-  answers.forEach(function(answer) {
+  answers.forEach(function (answer) {
     const options = /^(%(-?[.0-9]+)%|(=?))((\\.|[^#])*)#?(.*)/.exec(answer);
     if (options && options[4]) {
       let frac = 0;
       if (options[3]) {
-        frac = options[3] === '=' ? '=' : 100;
+        frac = options[3] === "=" ? "=" : 100;
       } else if (options[2]) {
         frac = options[2];
       }
-      if (_qtype === 'NUMERICAL' || _qtype === 'NM') {
+      if (_qtype === "NUMERICAL" || _qtype === "NM") {
         const tolerance = /^([^:]*):?(.*)/.exec(options[4])[2] || 0;
         _answerdata.push({
           id: getUuid(),
-          answer: strdecode(options[4].replace(/:.*/, '')),
+          answer: strdecode(options[4].replace(/:.*/, "")),
           feedback: strdecode(options[6]),
           tolerance: tolerance,
           fraction: frac,
@@ -947,34 +1039,44 @@ const _parseSubquestion = function(question) {
  * @param {Node} a Node that is the referred element
  * @private
  */
-const _addAnswer = function(a) {
-  let index = indexOfNode(_form.querySelectorAll('.' + CSS.ADD), a);
+const _addAnswer = function (a) {
+  let index = indexOfNode(_form.querySelectorAll("." + CSS.ADD), a);
   if (index === -1) {
-    index = indexOfNode(_form.querySelectorAll('.' + CSS.ANSWER + ', .' + CSS.FEEDBACK), a);
+    index = indexOfNode(
+      _form.querySelectorAll("." + CSS.ANSWER + ", ." + CSS.FEEDBACK),
+      a
+    );
     if (index !== -1) {
       index = Math.floor(index / 2) + 1;
     }
   }
-  let fraction = '';
-  if (a.closest('li')) {
-    fraction = a.closest('li').querySelector('.' + CSS.FRACTION).value;
-    index = indexOfNode(_form.querySelectorAll('li'), a.closest('li')) + 1;
+  let fraction = "";
+  if (a.closest("li")) {
+    fraction = a.closest("li").querySelector("." + CSS.FRACTION).value;
+    index = indexOfNode(_form.querySelectorAll("li"), a.closest("li")) + 1;
   }
   let tolerance = 0;
-  if (a.closest('li') && a.closest('li').querySelector('.' + CSS.TOLERANCE)) {
-    tolerance = a.closest('li').querySelector('.' + CSS.TOLERANCE).value;
+  if (a.closest("li") && a.closest("li").querySelector("." + CSS.TOLERANCE)) {
+    tolerance = a.closest("li").querySelector("." + CSS.TOLERANCE).value;
   }
   _getFormData();
   _answerdata.splice(index, 0, {
     id: getUuid(),
-    answer: '',
-    feedback: '',
+    answer: "",
+    feedback: "",
     fraction: fraction,
     fractionOptions: getFractionOptions(fraction),
-    tolerance: tolerance
+    tolerance: tolerance,
   });
-  _setDialogueContent(_qtype, true);
-  _form.querySelectorAll('.' + CSS.ANSWER).item(index).focus();
+  _setDialogueContent(_qtype, true)
+    // eslint-disable-next-line promise/always-return
+    .then(() => {
+      _form
+        .querySelectorAll("." + CSS.ANSWER)
+        .item(index)
+        .focus();
+    })
+    .catch((error) => displayException(error));
 };
 
 /**
@@ -984,17 +1086,21 @@ const _addAnswer = function(a) {
  * @param {Node} a Node that is the referred element
  * @private
  */
-const _deleteAnswer = function(a) {
-  let index = indexOfNode(_form.querySelectorAll('.' + CSS.DELETE), a);
+const _deleteAnswer = function (a) {
+  let index = indexOfNode(_form.querySelectorAll("." + CSS.DELETE), a);
   if (index === -1) {
-    index = indexOfNode(_form.querySelectorAll('li'), a.closest('li'));
+    index = indexOfNode(_form.querySelectorAll("li"), a.closest("li"));
   }
   _getFormData();
   _answerdata.splice(index, 1);
-  _setDialogueContent(_qtype, true);
-  const answers = _form.querySelectorAll('.' + CSS.ANSWER);
-  index = Math.min(index, answers.length - 1);
-  answers.item(index).focus();
+  _setDialogueContent(_qtype, true)
+    // eslint-disable-next-line promise/always-return
+    .then(() => {
+      const answers = _form.querySelectorAll("." + CSS.ANSWER);
+      index = Math.min(index, answers.length - 1);
+      answers.item(index).focus();
+    })
+    .catch((error) => displayException(error));
 };
 
 /**
@@ -1004,10 +1110,10 @@ const _deleteAnswer = function(a) {
  * @param {Node} a Node that is the referred element
  * @private
  */
-const _lowerAnswer = function(a) {
-  const li = a.closest('li');
+const _lowerAnswer = function (a) {
+  const li = a.closest("li");
   li.before(li.nextSibling);
-  li.querySelector('.' + CSS.ANSWER).focus();
+  li.querySelector("." + CSS.ANSWER).focus();
 };
 
 /**
@@ -1017,10 +1123,10 @@ const _lowerAnswer = function(a) {
  * @param {Node} a Node that is the referred element
  * @private
  */
-const _raiseAnswer = function(a) {
-  const li = a.closest('li');
+const _raiseAnswer = function (a) {
+  const li = a.closest("li");
   li.after(li.previousSibling);
-  li.querySelector('.' + CSS.ANSWER).focus();
+  li.querySelector("." + CSS.ANSWER).focus();
 };
 
 /**
@@ -1030,10 +1136,10 @@ const _raiseAnswer = function(a) {
  * @param {Event} e Event from button click
  * @private
  */
-const _cancel = function(e) {
+const _cancel = function (e) {
   e.preventDefault();
   // In case there is a marker where the new question should be inserted in the text it needs to be removed.
-  for (const span of _editor.dom.select('.' + markerClass + '.new')) {
+  for (const span of _editor.dom.select("." + markerClass + ".new")) {
     span.remove();
   }
   _modal.destroy();
@@ -1048,40 +1154,43 @@ const _cancel = function(e) {
  * @param {Event} e Event from button click
  * @private
  */
-const _setSubquestion = function(e) {
+const _setSubquestion = function (e) {
   e.preventDefault();
   _getFormData();
 
   // Build the parser function from the data, that is going to be placed into the editor content.
-  let question = '{' + _marks + ':' + _qtype + ':';
+  let question = "{" + _marks + ":" + _qtype + ":";
 
   for (let i = 0; i < _answerdata.length; i++) {
-    question += _answerdata[i].fraction && !isNaN(_answerdata[i].fraction)
-      ? '%' + _answerdata[i].fraction + '%' : _answerdata[i].fraction;
+    question +=
+      _answerdata[i].fraction && !isNaN(_answerdata[i].fraction)
+        ? "%" + _answerdata[i].fraction + "%"
+        : _answerdata[i].fraction;
     question += strencode(_answerdata[i].answer);
     if (_answerdata[i].tolerance) {
-      question += ':' + _answerdata[i].tolerance;
+      question += ":" + _answerdata[i].tolerance;
     }
     if (_answerdata[i].feedback) {
-      question += '#' + strencode(_answerdata[i].feedback);
+      question += "#" + strencode(_answerdata[i].feedback);
     }
     if (i < _answerdata.length - 1) {
-      question += '~';
+      question += "~";
     }
   }
-  question += '}';
+  question += "}";
 
   _modal.destroy();
   _modal = null;
   _editor.focus();
-  if (_selectedOffset > -1) { // We have to replace one of the marker spans (the innerHTML contains the question string).
-    _editor.dom.select('.' + markerClass)[_selectedOffset].innerHTML = question;
+  if (_selectedOffset > -1) {
+    // We have to replace one of the marker spans (the innerHTML contains the question string).
+    _editor.dom.select("." + markerClass)[_selectedOffset].innerHTML = question;
   } else {
     // Find the new maker, add the question string and remove the new flag.
-    const newEl = _editor.dom.select('.' + markerClass + '.new');
+    const newEl = _editor.dom.select("." + markerClass + ".new");
     if (newEl.length > 0) {
       newEl[0].innerHTML = question;
-      newEl[0].classList.remove('new');
+      newEl[0].classList.remove("new");
     }
   }
 };
@@ -1092,16 +1201,16 @@ const _setSubquestion = function(e) {
  * @method _getFormData
  * @private
  */
-const _getFormData = function() {
+const _getFormData = function () {
   _answerdata = [];
   let answer;
-  const answers = _form.querySelectorAll('.' + CSS.ANSWER);
-  const feedbacks = _form.querySelectorAll('.' + CSS.FEEDBACK);
-  const fractions = _form.querySelectorAll('.' + CSS.FRACTION);
-  const tolerances = _form.querySelectorAll('.' + CSS.TOLERANCE);
+  const answers = _form.querySelectorAll("." + CSS.ANSWER);
+  const feedbacks = _form.querySelectorAll("." + CSS.FEEDBACK);
+  const fractions = _form.querySelectorAll("." + CSS.FRACTION);
+  const tolerances = _form.querySelectorAll("." + CSS.TOLERANCE);
   for (let i = 0; i < answers.length; i++) {
     answer = answers.item(i).value;
-    if (_qtype === 'NM' || _qtype === 'NUMERICAL') {
+    if (_qtype === "NM" || _qtype === "NUMERICAL") {
       answer = Number(answer);
     }
     _answerdata.push({
@@ -1110,9 +1219,9 @@ const _getFormData = function() {
       feedback: feedbacks.item(i).value,
       fraction: fractions.item(i).value,
       fractionOptions: getFractionOptions(fractions.item(i).value),
-      tolerance: !isNull(tolerances.item(i)) ? tolerances.item(i).value : 0
+      tolerance: !isNull(tolerances.item(i)) ? tolerances.item(i).value : 0,
     });
-    _marks = _form.querySelector('.' + CSS.MARKS).value;
+    _marks = _form.querySelector("." + CSS.MARKS).value;
   }
 };
 
@@ -1123,12 +1232,12 @@ const _getFormData = function() {
  * @method resolveSubquestion
  * @return {Mixed} The selected node of with the subquestion if found, false otherwise.
  */
-const resolveSubquestion = function() {
+const resolveSubquestion = function () {
   let span = _editor.selection.getStart();
   if (!isNull(span.classList) && span.classList.contains(markerClass)) {
     return span;
   }
-  _editor.dom.getParents(span, elm => {
+  _editor.dom.getParents(span, (elm) => {
     // Are we in a span that encapsulates the cloze question?
     if (!isNull(elm.classList) && elm.classList.contains(markerClass)) {
       return elm;
@@ -1145,5 +1254,5 @@ export {
   onBeforeGetContent,
   onPreProcess,
   onPostProcess,
-  onBlur
+  onBlur,
 };
