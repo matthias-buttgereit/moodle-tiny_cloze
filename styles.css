@@ -42,16 +42,21 @@
 
 .tiny_cloze_qtype .tiny_cloze_summary {
     display: none;
-    left: 175px;
+    left: 25%;
+    width: 75%;
     position: absolute;
     top: 0;
+}
+
+.tiny_cloze_qtype .tiny_cloze_qtype_inputs{
+    width:25%
 }
 
 .tiny_cloze_qtype input[type="radio"]:focus {
     box-shadow: none;
 }
 
-.tiny_cloze_qtype input[type="radio"]:checked + label .tiny_cloze_summary {
+.tiny_cloze_qtype input[type="radio"]:checked ~ label .tiny_cloze_summary {
     display: inline;
 }
 
