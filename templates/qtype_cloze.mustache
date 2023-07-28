@@ -12,101 +12,101 @@
             class="form-check-input"
           />
           <label for="qtype_qtype_{{ type }}">
-          <span class="typename">{{ type }}</span>
-          <span class="form-shortname d-block small text-muted"
-            >theme_boost_union | loginformposition</span
-          >
-        <span class="{{ CSS.SUMMARY }}">
-          <div class="tiny_cloze_postborder">
-            <h6>{{ name }}</h6>
-            <p>{{ summary }}</p>
-          </div>
-          <div class="tiny_cloze_postborder">
-            {{#shuffleoption}}
-            <h6>Settings:</h6>
-            <div class="form-check row">
-              <span class="col-12">
-                <input
-                  type="checkbox"
-                  id="shuffleoptioninput"
-                  class="form-check-input"
-                />
-                <label for="shuffleoptioninput">Shuffle</label>
-              </span>
-            </div>
-            {{/shuffleoption}}
+            <span class="typename">{{ type }}</span>
+            <span class="form-shortname d-block small text-muted"
+              >theme_boost_union | loginformposition</span
+            >
+            <span class="{{ CSS.SUMMARY }}">
+              <div class="tiny_cloze_postborder">
+                <h6>{{ name }}</h6>
+                <p>{{ summary }}</p>
+              </div>
+              <div class="tiny_cloze_postborder">
+                {{#shuffleoption}}
+                <h6>Settings:</h6>
+                <div class="form-check row">
+                  <span class="col-12">
+                    <input
+                      type="checkbox"
+                      id="shuffleoptioninput"
+                      class="form-check-input"
+                    />
+                    <label for="shuffleoptioninput">Shuffle</label>
+                  </span>
+                </div>
+                {{/shuffleoption}}
 
-            {{#casesensitiveoption}}
-            <h6>Settings:</h6>
-            <div class="form-check row">
-              <span class="col-12">
-                <input
-                  type="checkbox"
-                  id="casesensitiveoptioninput"
-                  class="form-check-input"
-                />
-                <label for="casesensitiveoptioninput">casesensitive</label>
-              </span>
-            </div>
-            {{/casesensitiveoption}}
+                {{#casesensitiveoption}}
+                <h6>Settings:</h6>
+                <div class="form-check row">
+                  <span class="col-12">
+                    <input
+                      type="checkbox"
+                      id="casesensitiveoptioninput"
+                      class="form-check-input"
+                    />
+                    <label for="casesensitiveoptioninput">casesensitive</label>
+                  </span>
+                </div>
+                {{/casesensitiveoption}}
 
-            {{#dropboxoption}}
-            <div class="form-check row">
-              <span class="col-6">
-                <input
-                  name="dropboxoptioninput"
-                  type="radio"
-                  id="dropboxoptioninput"
-                  class="form-check-input"
-                />
-                <label for="dropboxoptioninput">Dropbox</label>
-              </span>
-              <span class="col-6">
-                <input
-                  name="dropboxoptioninput"
-                  type="radio"
-                  id="dropboxoptioninput"
-                  class="form-check-input"
-                />
-                <label for="dropboxoptioninput">Radiobutton</label>
-              </span>
-            </div>
-            {{/dropboxoption}}
+                {{#dropboxoption}}
+                <div class="form-check row">
+                  <span class="col-6">
+                    <input
+                      name="dropboxoptioninput"
+                      type="radio"
+                      id="dropboxoptioninput"
+                      class="form-check-input"
+                    />
+                    <label for="dropboxoptioninput">Dropbox</label>
+                  </span>
+                  <span class="col-6">
+                    <input
+                      name="dropboxoptioninput"
+                      type="radio"
+                      id="dropboxoptioninput"
+                      class="form-check-input"
+                    />
+                    <label for="dropboxoptioninput">Radiobutton</label>
+                  </span>
+                </div>
+                {{/dropboxoption}}
 
-            {{#alignmentoption}}
-            <div class="form-check row">
-              <span class="col-6">
-                <input
-                  name="alignmentoptioninput"
-                  type="radio"
-                  id="alignmentoptioninput"
-                  class="form-check-input"
-                />
-                <label for="alignmentoptioninput">Vertical</label>
-              </span>
-              <span class="col-6">
-                <input
-                  name="alignmentoptioninput"
-                  type="radio"
-                  id="alignmentoptioninput"
-                  class="form-check-input"
-                />
-                <label for="alignmentoptioninput">Horizontal</label>
-              </span>
-            </div>
-            {{/alignmentoption}}
+                {{#alignmentoption}}
+                <div class="form-check row">
+                  <span class="col-6">
+                    <input
+                      name="alignmentoptioninput"
+                      type="radio"
+                      id="alignmentoptioninput"
+                      class="form-check-input"
+                    />
+                    <label for="alignmentoptioninput">Vertical</label>
+                  </span>
+                  <span class="col-6">
+                    <input
+                      name="alignmentoptioninput"
+                      type="radio"
+                      id="alignmentoptioninput"
+                      class="form-check-input"
+                    />
+                    <label for="alignmentoptioninput">Horizontal</label>
+                  </span>
+                </div>
+                {{/alignmentoption}}
 
-            <div class="tiny_cloze_premargin">
-              <h6>Functionality:</h6>
-              <ul>
-                {{#options}}
-                <li>{{.}}</li>
-                {{/options}}
-              </ul>
-            </div>
-          </div>
-        </span>
-        </label>
+                <div class="tiny_cloze_premargin">
+                  <h6>Functionality:</h6>
+                  <ul>
+                    {{#options}}
+                    <li>{{.}}</li>
+                    {{/options}}
+                  </ul>
+                </div>
+              </div>
+            </span>
+          </label>
       </div>
       {{/types}}
     </div>

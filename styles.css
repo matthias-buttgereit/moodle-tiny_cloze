@@ -51,7 +51,7 @@
     box-shadow: none;
 }
 
-.tiny_cloze_qtype input[type="radio"]:checked ~ label .tiny_cloze_summary {
+.tiny_cloze_qtype input[type="radio"]:checked + label .tiny_cloze_summary {
     display: inline;
 }
 
