@@ -712,8 +712,8 @@ const _setDialogueContent = async function (qtype, nomodalevents) {
       types: getMainQuestionTypes(),
     };
     let qtypemustache = await Templates.renderForPromise(
-      "editor_tiny/qtype_cloze",
-      { ...context }
+      "tiny_cloze/qtype_cloze", //editor_tiny/plugins/cloze/template
+      { ...context}
     );
     contentText = qtypemustache.html;
   } else {
