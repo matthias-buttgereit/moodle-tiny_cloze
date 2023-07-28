@@ -160,21 +160,81 @@ const TEMPLATE = {
       '{{#types}}' +
       '<div class="option">' +
       '<input name="qtype" id="qtype_qtype_{{type}}" value="{{type}}" type="radio" class="form-check-input">' +
-      '<label for="qtype_qtype_{{type}}">' +
+       '<label for="qtype_qtype_{{type}}">' +
       '<span class="typename">{{type}}</span>' +
-      '{{#subtypes}}' +
-      '<input name="subqtype" id="qtype_qtype_{{subtypes}}" value="{{subtypes}}"' +
-      'type="radio" class="form-check-input {{CSS.SUMMARY}}">' +
-      '<label for="qtype_qtype_{{subtypes}}">' +
-      //  '<span class="typename">{{subtypes}}</span>' +
-      '<span class="{{CSS.SUMMARY}}"><h6>{{name}}</h6><p>{{summary}}</p>' +
-      '<ul>{{#options}}' +
-      '<li>{{.}}</li>' +
-      '{{/options}}</ul>' +
-      '{{/subtypes}}' +
+      '<span class="form-shortname d-block small text-muted">theme_boost_union | loginformposition</span>' +
+      // '<input name="subqtype" id="qtype_qtype_{{subtypes.name}}" value="{{subtypes}}"' +
+      // 'type="radio" class="form-check-input {{CSS.SUMMARY}}">' +
+      // '<label for="qtype_qtype_{{subtypes}}">' +
+      // '</label>' +
+      '<span class="{{CSS.SUMMARY}}">' +
+      '<div class="tiny_cloze_postborder"><h6>{{name}}</h6><p>{{summary}}</p></div>' +
+      '<div class="tiny_cloze_postborder">' +
+      '{{#shuffleoption}}' +
+      '<h6>Settings:</h6>' +
+      '<div class="form-check row">' +
+      '<span class="col-12">' +
+      '<input type="checkbox" id="shuffleoptioninput" class="form-check-input">' +
+      '<label for="shuffleoptioninput">Shuffle</label>' +
       '</span>' +
-      '</label></div>' +
+      '</div >' +
+      '{{/shuffleoption}}' +
+
+      '{{#casesensitiveoption}}' +
+      '<div class="form-check row">' +
+      '<span class="col-12">' +
+      '<input type="checkbox" id="casesensitiveoptioninput" class="form-check-input">' +
+      '<label for="casesensitiveoptioninput">casesensitive</label>' +
+      '</span>' +
+      '</div >' +
+      '{{/casesensitiveoption}}' +
+
+      '{{#dropboxoption}}' +
+      '<div class="form-check row">' +
+      '<span class="col-6">' +
+      '<input name="dropboxoptioninput" type="radio" id="dropboxoptioninput" class="form-check-input">' +
+      '<label for="dropboxoptioninput">Dropbox</label>' +
+      '</span>' +
+      '<span class="col-6">' +
+      '<input name="dropboxoptioninput" type="radio" id="dropboxoptioninput" class="form-check-input">' +
+      '<label for="dropboxoptioninput">Radiobutton</label>' +
+      '</span>' +
+      '</div >' +
+      '{{/dropboxoption}}' +
+
+      '{{#alignmentoption}}' +
+      '<div class="form-check row">' +
+      '<span class="col-6">' +
+      '<input name="alignmentoptioninput" type="radio" id="alignmentoptioninput" class="form-check-input">' +
+      '<label for="alignmentoptioninput">Vertical</label>' +
+      '</span>' +
+      '<span class="col-6">' +
+      '<input name="alignmentoptioninput" type="radio" id="alignmentoptioninput" class="form-check-input">' +
+      '<label for="alignmentoptioninput">Horizontal</label>' +
+      '</span >' +
+      '</div>' +
+      '{{/alignmentoption}}' +
+      '</div>' +
+
+      '<div class="tiny_cloze_premargin">' +
+      '<h6>Functionality:</h6>' +
+      '<ul>' +
+      '{{#options}}' +
+      '<li>{{.}}</li>' +
+      '{{/options}}' +
+//       '{{#shuffleoption}}' +
+//       '<li>{{STR.shuffle}}</li>' +
+//       '{{/shuffleoption}}' +
+//       '{{#dropboxoption}}' +
+//       '<li>{{STR.shuffle}}</li>' +
+//       '{{/dropboxoption}}' +
+// ...
+      '</ul>' +
+      '</div>' +
+      '</span>' +
+      '</div>' +
       '{{/types}}' +
+      '</div>' +
       '</form></div>',
     FOOTER: '<button type="button" class="btn btn-secondary" data-action="cancel">{{cancel}}</button>' +
       '<button type="button" class="btn btn-primary" data-action="save">{{submit}}</button>',
@@ -291,113 +351,32 @@ const getMainQuestionTypes = function() {
   return [
     {
       type: 'MULTICHOICE',
-      subtypes: [
-        {
-          'type': 'MULTICHOICE',
-          'abbr': ['MC'],
-          'name': STR.multichoice,
-          'summary': STR.summary_multichoice,
-          'options': [STR.selectinline, STR.singleyes],
-        },
-        {
-          'type': 'MULTICHOICE_H',
-          'abbr': ['MCH'],
-          'name': STR.multichoice,
-          'summary': STR.summary_multichoice,
-          'options': [STR.horizontal, STR.singleyes],
-        },
-        {
-          'type': 'MULTICHOICE_V',
-          'abbr': ['MCV'],
-          'name': STR.multichoice,
-          'summary': STR.summary_multichoice,
-          'options': [STR.vertical, STR.singleyes],
-        },
-        {
-          'type': 'MULTICHOICE_S',
-          'abbr': ['MCS'],
-          'name': STR.multichoice,
-          'summary': STR.summary_multichoice,
-          'options': [STR.selectinline, STR.shuffle, STR.singleyes],
-        },
-        {
-          'type': 'MULTICHOICE_HS',
-          'abbr': ['MCHS'],
-          'name': STR.multichoice,
-          'summary': STR.summary_multichoice,
-          'options': [STR.horizontal, STR.shuffle, STR.singleyes],
-        },
-        {
-          'type': 'MULTICHOICE_VS',
-          'abbr': ['MCVS'],
-          'name': STR.multichoice,
-          'summary': STR.summary_multichoice,
-          'options': [STR.vertical, STR.shuffle, STR.singleyes],
-        },
-      ]
+      name: STR.multichoice,
+      summary: STR.summary_multichoice,
+      shuffleoption: true,
+      dropboxoption: true,
+      alignmentoption: true,
+      options: [STR.horizontal, STR.vertical, STR.selectinline, STR.shuffle, STR.singleyes],
     },
     {
       type: 'MULTIRESPONSE',
-      subtypes: [
-        {
-          'type': 'MULTIRESPONSE',
-          'abbr': ['MR'],
-          'name': STR.multiresponse,
-          'summary': STR.summary_multichoice,
-          'options': [STR.multi_vertical, STR.singleno],
-        },
-        {
-          'type': 'MULTIRESPONSE_H',
-          'abbr': ['MRH'],
-          'name': STR.multiresponse,
-          'summary': STR.summary_multichoice,
-          'options': [STR.multi_horizontal, STR.singleno],
-        },
-        {
-          'type': 'MULTIRESPONSE_S',
-          'abbr': ['MRS'],
-          'name': STR.multiresponse,
-          'summary': STR.summary_multichoice,
-          'options': [STR.multi_vertical, STR.shuffle, STR.singleno],
-        },
-        {
-          'type': 'MULTIRESPONSE_HS',
-          'abbr': ['MRHS'],
-          'name': STR.multiresponse,
-          'summary': STR.summary_multichoice,
-          'options': [STR.multi_horizontal, STR.shuffle, STR.singleno],
-        },
-      ]
+      name: STR.multiresponse,
+      summary: STR.summary_multichoice,
+      shuffleoption: true,
+      alignmentoption: true,
+      options: [STR.shuffle, STR.multi_horizontal, STR.multi_vertical, STR.singleno],
     },
     {
       type: 'NUMERICAL',
-      subtypes: [
-        {
-          'type': 'NUMERICAL',
-          'abbr': ['NM'],
-          'name': STR.numerical,
-          'summary': STR.summary_numerical,
-        },
-      ]
+      name: STR.numerical,
+      summary: STR.summary_numerical,
     },
     {
       type: 'SHORTANSWER',
-      subtypes: [
-        {
-          'type': 'SHORTANSWER',
-          'abbr': ['SA', 'MW'],
-          'name': STR.shortanswer,
-          'summary': STR.summary_shortanswer_nocase,
-          'options': [STR.shortanswerno],
-        },
-        {
-          'type': 'SHORTANSWER_C',
-          'abbr': ['SAC', 'MWC'],
-          'name': STR.shortanswer,
-          'summary': STR.summary_shortanswer_yescase,
-          'options': [STR.shortansweryes],
-        },
-      ],
+      name: STR.shortanswer,
+      summary: STR.summary_shortanswer,
+      casesensitiveoption: true,
+      options: [STR.caseno,STR.caseyes],
     },
   ];
 };
@@ -789,7 +768,10 @@ const _setDialogueContent = function(qtype, nomodalevents) {
   const $root = _modal.getRoot();
   _form = $root.get(0).querySelector('form');
 
-  if (!nomodalevents) {
+  // eslint-disable-next-line no-console
+
+  if (!nomodalevents) {  
+    console.log(_form,_modal);  
     _modal.registerEventListeners();
     _modal.registerCloseOnSave();
     _modal.registerCloseOnCancel();
@@ -797,6 +779,18 @@ const _setDialogueContent = function(qtype, nomodalevents) {
 
     if (!qtype) { // For the question list we need the choice handler only, and we are done.
       $root.on(ModalEvents.save, _choiceHandler);
+
+      _form.addEventListener('click', e => {
+        // eslint-disable-next-line babel/no-unused-expressions, no-console
+        console.log("somethingclicked", e);
+        
+       // _changeSelectedQuestionType
+        // if (p.classList.contains(CSS.DELETE)) {
+        //   e.preventDefault();
+        //   _deleteAnswer(p);
+        //   return;
+        // }
+      });
       return;
     } // Handler to add the question string to the editor content.
     $root.on(ModalEvents.save, _setSubquestion);
@@ -838,6 +832,7 @@ const _setDialogueContent = function(qtype, nomodalevents) {
       _raiseAnswer(p);
     }
   });
+
   _form.addEventListener('keyup', e => {
     const p = getTarget(e);
     if (isNull(p)) {

@@ -11,9 +11,33 @@
     overflow-x: hidden;
 }
 
+.modal-header{
+    box-shadow: 0 2px 2px -2px rgba(34,47,62,.1), 0 8px 8px -4px rgba(34,47,62,.07);
+}
+
+.modal-body{
+    box-shadow: 0 2px 2px -2px rgba(34,47,62,.1), 0 8px 8px -4px rgba(34,47,62,.07);
+}
+
 .tiny_cloze_qtype {
+    height: 375px;
     overflow: auto;
     position: relative;
+}
+
+.tiny_cloze_qtype .form-check {
+    display: flex
+}
+
+.tiny_cloze_premargin {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.tiny_cloze_postborder {
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 2px -2px rgba(34,47,62,.1), 0 8px 8px -4px rgba(34,47,62,.07);
 }
 
 .tiny_cloze_qtype .tiny_cloze_summary {
