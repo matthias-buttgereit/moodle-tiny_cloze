@@ -737,7 +737,6 @@ const _setDialogueContent = async function (qtype, nomodalevents) {
   // eslint-disable-next-line no-console
 
   if (!nomodalevents) {
-    console.log(_form, _modal);
     _modal.registerEventListeners();
     _modal.registerCloseOnSave();
     _modal.registerCloseOnCancel();
@@ -816,6 +815,72 @@ const _setDialogueContent = async function (qtype, nomodalevents) {
 };
 
 /**
+ * Saves the question choice
+ *
+ * @method _setSelectedQType
+ * @private                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     <ay
+ */
+const _setSelectedQType = function () {
+let selectedPreQtype = _form.querySelector("input[name=qtype]:checked")?.value;
+// eslint-disable-next-line no-console
+console.log(selectedPreQtype);
+let _qtype = null;
+let selectedLabel = null;
+let casesensitiveoptioninput = null;
+let shuffleoptioninput = null;
+//Todo Refactoren
+let dropboxoptioninput = null;
+let radiobuttonoptioninput = null;
+let verticaloptioninput = null;
+let horizontaloptioninput = null;
+if (selectedPreQtype) {
+  switch (selectedPreQtype) {
+    case "NUMERICAL":
+      _qtype = selectedPreQtype;
+      break;
+    case "MULTICHOICE":
+      //Todo Refactor
+      selectedLabel = _form.querySelector("label[for=qtype_qtype_" + selectedPreQtype + "]");
+      if(selectedLabel) {
+        shuffleoptioninput = selectedLabel.querySelector("#shuffleoptioninput")?.checked;
+       // dropboxoptioninput = selectedLabel.querySelector("#dropboxoptioninput")?.checked;
+        radiobuttonoptioninput = selectedLabel.querySelector("#radiobuttonoptioninput")?.checked;  
+
+        if (radiobuttonoptioninput){
+          verticaloptioninput = selectedLabel.querySelector("#verticaloptioninput")?.checked;
+        //  horizontaloptioninput = selectedLabel.querySelector("#horizontaloptioninput")?.checked;
+
+
+        }
+       }
+
+    break;
+    case "MULTIRESPONSE":
+       //Todo Refactor
+       selectedLabel = _form.querySelector("label[for=qtype_qtype_" + selectedPreQtype + "]");
+       if(selectedLabel) {
+        shuffleoptioninput = selectedLabel.querySelector("#shuffleoptioninput")?.checked;
+        verticaloptioninput = selectedLabel.querySelector("#verticaloptioninput")?.checked;
+        horizontaloptioninput = selectedLabel.querySelector("#horizontaloptioninput")?.checked;
+        
+        // if (){
+
+        // }
+       }
+
+      break;
+    case "SHORTANSWER":
+    selectedLabel = _form.querySelector("label[for=qtype_qtype_" + selectedPreQtype + "]");
+    casesensitiveoptioninput = selectedLabel.querySelector("#casesensitiveoptioninput")?.checked;
+    _qtype = selectedPreQtype + (casesensitiveoptioninput ? "_C" : "");
+    break;
+    default:
+      break;
+  }
+}
+return _qtype;
+};
+/**
  * Handle question choice.
  *
  * @method _choiceHandler
@@ -824,10 +889,10 @@ const _setDialogueContent = async function (qtype, nomodalevents) {
  */
 const _choiceHandler = function (e) {
   e.preventDefault();
-  let qtype = _form.querySelector("input[name=qtype]:checked");
-  if (qtype) {
-    _qtype = qtype.value;
-  }
+ _qtype = _setSelectedQType(); //_form.querySelector("input[name=qtype]:checked");
+  // if (qtype) {
+  //   _qtype = qtype.value;
+  // }
   const one = _qtype.indexOf("SHORTANSWER") !== -1 || _qtype === "NUMERICAL";
   const blankAnswer = {
     id: getUuid(),
