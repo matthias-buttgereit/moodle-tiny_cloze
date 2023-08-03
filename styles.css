@@ -13,7 +13,8 @@
 
 .tiny_cloze_qtype {
     /* height: 375px; */
-    overflow: auto;
+    /* overflow: auto; */
+    height: 100%;
     position: relative;
 }
 
@@ -23,6 +24,11 @@
 
 .tiny_cloze_qtype .typename{
     padding-left:1.25rem;
+    text-transform: lowercase;
+}
+
+.tiny_cloze_qtype .tiny_cloze_qtype_inputs span:first-of-type::first-letter{
+    text-transform:capitalize;
 }
 
 .tiny_cloze_qtype .form-check {
@@ -38,7 +44,8 @@
 }
 
 .tiny_cloze_premargin {
-    margin-top: 1rem;
+    border-top: 1px solid #dee2e6;
+    padding-top: 1rem;
     margin-bottom: 1rem;
 }
 

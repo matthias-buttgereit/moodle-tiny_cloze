@@ -1,4 +1,4 @@
-<div class="tiny_cloze mt-0 mx-2 mb-2">
+<div class="tiny_cloze mt-0 mx-2 s">
 
   <form name="tiny_cloze_form">
     <div class="{{ CSS.TYPE }} form-check">
@@ -14,8 +14,8 @@
           />
           <label for="qtype_qtype_{{ type }}">
             <div class="tiny_cloze_qtype_inputs">
-            <span class="typename">{{ type }}</span>
-            <span class="form-shortname d-block small text-muted"
+            <span class="typename d-block">{{ type }}</span>
+            <span class="d-block small text-muted"
               >{{ summary }}</span
             >
             </div>
@@ -24,13 +24,13 @@
                 <h6>{{ name }}</h6>
                 <p>{{ summary }}</p>
               </div>
-              <div class="tiny_cloze_postborder">
+              <div >
                 {{#shuffleoption}}
                 {{! <div class="form-check row mb-2">
                   <span class="col-12">
                     <input
                       type="checkbox"
-                      id="shuffleoptioninput"
+                      id="shuffleoptioninput"s
                       class="form-check-input"
                     />
                     <label for="shuffleoptioninput">Shuffle</label>
